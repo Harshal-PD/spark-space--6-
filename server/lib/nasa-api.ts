@@ -28,7 +28,7 @@ export interface NASAPlanetData {
   ringTexture?: string;
 }
 
-const SPACE_DATA_API = "https://api.spaceflightnewsapi.net/v4";
+// const SPACE_DATA_API = "https://api.spaceflightnewsapi.net/v4";
 
 export async function fetchNASAMissions(): Promise<NASAMissionData[]> {
   const missions: NASAMissionData[] = [

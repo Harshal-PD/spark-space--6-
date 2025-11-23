@@ -2,6 +2,10 @@ import serverless from "serverless-http";
 import express from "express";
 import cors from "cors";
 
+// Static imports so bundlers (Netlify) include these files
+import { fetchNASAMissions } from "../../server/lib/nasa-api";
+import { PLANETS } from "../../client/data/planets";
+
 const app = express();
 
 // Middleware
@@ -14,8 +18,6 @@ app.get("/api/missions", async (_req, res) => {
   try {
     console.log("[Netlify] GET /api/missions");
     
-    // Dynamic import to handle build context
-    const { fetchNASAMissions } = await import("../../server/lib/nasa-api");
     const missions = await fetchNASAMissions();
     
     const formatted = missions.map((mission) => ({
@@ -50,9 +52,6 @@ app.get("/api/missions", async (_req, res) => {
 app.get("/api/planets", async (_req, res) => {
   try {
     console.log("[Netlify] GET /api/planets");
-    
-    // Dynamic import to handle build context
-    const { PLANETS } = await import("../../client/data/planets");
     
     const formatted = PLANETS.map((planet) => ({
       id: planet.slug,
