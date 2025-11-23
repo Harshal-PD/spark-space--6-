@@ -1,0 +1,85 @@
+import type { RequestHandler } from "express";
+import { z } from "zod";
+import type { ChatRequest, ChatResponse, ChatMessage } from "@shared/api";
+
+const ChatSchema = z.object({
+  model: z.string().optional(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant", "system"]),
+        content: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+function toGeminiContents(messages: ChatMessage[]) {
+  // Gemini expects roles: "user" and "model" only. We fold any system message into the first user turn.
+  const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+  let systemPreamble = "";
+  for (const m of messages) {
+    if (m.role === "system") {
+      systemPreamble += (systemPreamble ? "\n\n" : "") + m.content;
+      continue;
+    }
+    const role = m.role === "assistant" ? "model" : "user";
+    const text = m.role === "user" && systemPreamble ? `${systemPreamble}\n\n${m.content}` : m.content;
+    contents.push({ role, parts: [{ text }] });
+    if (m.role === "user" && systemPreamble) {
+      systemPreamble = ""; // only prepend once to the next user message
+    }
+  }
+  return contents;
+}
+
+export const handleGeminiChat: RequestHandler = async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY environment variable is not set");
+    return res.status(500).json({
+      error: "AI service not configured",
+      message: "The Gemini API key is not set. Please configure GEMINI_API_KEY environment variable."
+    });
+  }
+
+  const parsed = ChatSchema.safeParse(req.body as ChatRequest);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+  }
+
+  const { messages: rawMessages, model: modelOverride } = parsed.data;
+  const messages = rawMessages as ChatMessage[];
+  const model = modelOverride || "gemini-2.0-flash";
+
+  try {
+    const contents = toGeminiContents(messages);
+    const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return res.status(response.status).json({ error: "Gemini API error", details: text });
+    }
+
+    const data = (await response.json()) as any;
+    const candidate = data?.candidates?.[0];
+    const parts: string[] = candidate?.content?.parts?.map((p: any) => p?.text).filter(Boolean) ?? [];
+    const text = parts.join("\n");
+
+    const payload: ChatResponse = {
+      role: "assistant",
+      content: text,
+      model,
+    };
+
+    res.status(200).json(payload);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to contact Gemini API", details: err?.message ?? String(err) });
+  }
+};
