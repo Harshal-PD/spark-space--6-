@@ -95,11 +95,9 @@ app.get("/api/planets", async (_req, res) => {
 
 // Chat API
 app.post("/api/chat/gemini", async (req, res) => {
-  // 1) Log incoming headers/body (Netlify function logs)
   console.log("[Netlify] Incoming /api/chat/gemini headers:", JSON.stringify(req.headers || {}));
   console.log("[Netlify] Incoming /api/chat/gemini rawBodyType:", typeof req.body);
-
-  // 2) Defensive parsing / normalization
+  
   let raw = req.body;
   let messages: any = undefined;
 
@@ -116,7 +114,31 @@ app.post("/api/chat/gemini", async (req, res) => {
 
   // If body is an object, try common shapes
   if (!messages && typeof raw === "object" && raw !== null) {
-    messages = raw.messages ?? raw.payload?.messages ?? raw.data?.messages ?? raw;
+    // 1) Normal case: { messages: [...] }
+    if (Array.isArray(raw.messages)) {
+      messages = raw.messages;
+    } else if (Array.isArray(raw.payload?.messages)) {
+      messages = raw.payload.messages;
+    } else if (Array.isArray(raw.data?.messages)) {
+      messages = raw.data.messages;
+    } else if (Array.isArray(raw)) {
+      // body is an actual array
+      messages = raw;
+    } else {
+      // 2) Handle object that has numeric keys like { "0": {...}, "1": {...} }
+      const keys = Object.keys(raw);
+      const allNumeric = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+      if (allNumeric) {
+        // convert to array preserving numeric order
+        messages = keys
+          .map(k => ({ idx: Number(k), val: raw[k] }))
+          .sort((a,b) => a.idx - b.idx)
+          .map(x => x.val);
+      } else {
+        // 3) Maybe the client sent top-level messages object under some other key
+        messages = raw.messages ?? raw.payload?.messages ?? raw.data?.messages ?? undefined;
+      }
+    }
   }
 
   // If messages is a string (double-encoded), try parse
@@ -125,25 +147,27 @@ app.post("/api/chat/gemini", async (req, res) => {
       const parsed = JSON.parse(messages);
       messages = parsed?.messages ?? parsed;
     } catch (err) {
-      // leave as-is
+      // can't parse
     }
   }
 
-  // If still not an array, but raw itself is an array (client posted an array directly)
-  if (!Array.isArray(messages) && Array.isArray(raw)) {
-    messages = raw;
+  // Final fallback: if req.body itself is an array-like arguments object (rare)
+  if (!Array.isArray(messages) && typeof req.body === "object" && req.body !== null && Array.isArray(Object.values(req.body))) {
+    const vals = Object.values(req.body);
+    const allMsgLike = vals.length > 0 && vals.every(v => v && (v.content || typeof v === "string"));
+    if (allMsgLike) messages = vals;
   }
 
-  // Final validation
+  // Final validation & debug response
   if (!Array.isArray(messages) || messages.length === 0) {
-    // Return richer debug info for debugging (remove debug before long-term)
     return res.status(400).json({
       error: "Invalid request: messages array required",
       debug: {
         receivedType: typeof req.body,
         receivedKeys: typeof req.body === "object" && req.body !== null ? Object.keys(req.body) : null,
-        hint: "Send Content-Type: application/json and body JSON.stringify({ messages: [...] }) or send an array directly.",
-      },
+        note: "Handler tried to find messages in common shapes and numeric-key objects.",
+        hint: "Best format: Content-Type: application/json and body JSON.stringify({ messages: [...] })"
+      }
     });
   }
 
@@ -157,10 +181,9 @@ app.post("/api/chat/gemini", async (req, res) => {
     return { role: m?.role ?? "user", content: JSON.stringify(m) };
   });
 
-  // Overwrite req.body.messages and proceed with original logic below
   req.body = { messages: normalized };
 
-  // Now call the original handler logic (in this file) — kept the same as before
+  // --- existing Gemini logic (unchanged) ---
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -171,22 +194,18 @@ app.post("/api/chat/gemini", async (req, res) => {
       });
     }
 
-    const { messages } = req.body; // now normalized
-    // still validate just in case
+    const { messages } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Invalid request: messages array required" });
     }
 
     const model = "gemini-2.0-flash";
-
-    // Convert messages to Gemini format
     const contents = messages.map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
     const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
     console.log("[Netlify] POST /api/chat/gemini - Calling Gemini API");
 
     const response = await fetch(url, {
