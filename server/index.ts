@@ -9,6 +9,22 @@ import { handleGetPlanets, handleSyncPlanets } from "./routes/planets";
 export function createServer() {
   const app = express();
 
+  // ---- NETLIFY PREFIX STRIP (important) ----
+  // Netlify forwards requests to /.netlify/functions/<fnname>/<splat>.
+  // When using a redirect to /.netlify/functions/api/:splat the runtime path becomes
+  // "/.netlify/functions/api/..." which doesn't match routes registered as "/api/..."
+  // This middleware strips that prefix automatically when running on Netlify.
+  if (process.env.NETLIFY) {
+    app.use((req, _res, next) => {
+      const prefix = "/.netlify/functions/api";
+      if (typeof req.url === "string" && req.url.startsWith(prefix)) {
+        req.url = req.url.slice(prefix.length) || "/";
+      }
+      next();
+    });
+  }
+  // -------------------------------------------
+
   // Middleware
   app.use(cors());
   app.use(express.json());
@@ -21,7 +37,15 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
-  app.post("/api/chat/gemini", handleGeminiChat);
+
+  // Add some logging for debugging bodies/headers on Netlify
+  app.post("/api/chat/gemini", (req, res, next) => {
+    if (process.env.NETLIFY) {
+      console.log("[Netlify] /api/chat/gemini headers:", JSON.stringify(req.headers));
+      console.log("[Netlify] /api/chat/gemini body:", JSON.stringify(req.body));
+    }
+    return handleGeminiChat(req, res, next);
+  });
 
   // Missions API routes
   app.get("/api/missions", handleGetMissions);
