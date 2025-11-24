@@ -8,6 +8,20 @@ import { PLANETS } from "../../client/data/planets";
 
 const app = express();
 
+app.use((req, _res, next) => {
+  try {
+    const prefix = "/.netlify/functions/api";
+    if (typeof req.url === "string" && req.url.startsWith(prefix)) {
+      req.url = req.url.slice(prefix.length) || "/";
+    }
+  } catch (err) {
+    // don't allow this to crash the function
+    console.warn("Prefix strip error:", err);
+  }
+  next();
+
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -81,23 +95,90 @@ app.get("/api/planets", async (_req, res) => {
 
 // Chat API
 app.post("/api/chat/gemini", async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error("[Netlify] GEMINI_API_KEY not set");
-    return res.status(500).json({
-      error: "AI service not configured",
-      message: "GEMINI_API_KEY environment variable is not set. Please configure it in Netlify dashboard.",
+  // 1) Log incoming headers/body (Netlify function logs)
+  console.log("[Netlify] Incoming /api/chat/gemini headers:", JSON.stringify(req.headers || {}));
+  console.log("[Netlify] Incoming /api/chat/gemini rawBodyType:", typeof req.body);
+
+  // 2) Defensive parsing / normalization
+  let raw = req.body;
+  let messages: any = undefined;
+
+  // If body is a string, try parse it
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(raw);
+      messages = parsed?.messages ?? parsed?.payload?.messages ?? parsed;
+    } catch (err) {
+      // raw is a plain string (not JSON), treat as single message
+      messages = [{ role: "user", content: raw }];
+    }
+  }
+
+  // If body is an object, try common shapes
+  if (!messages && typeof raw === "object" && raw !== null) {
+    messages = raw.messages ?? raw.payload?.messages ?? raw.data?.messages ?? raw;
+  }
+
+  // If messages is a string (double-encoded), try parse
+  if (!Array.isArray(messages) && typeof messages === "string") {
+    try {
+      const parsed = JSON.parse(messages);
+      messages = parsed?.messages ?? parsed;
+    } catch (err) {
+      // leave as-is
+    }
+  }
+
+  // If still not an array, but raw itself is an array (client posted an array directly)
+  if (!Array.isArray(messages) && Array.isArray(raw)) {
+    messages = raw;
+  }
+
+  // Final validation
+  if (!Array.isArray(messages) || messages.length === 0) {
+    // Return richer debug info for debugging (remove debug before long-term)
+    return res.status(400).json({
+      error: "Invalid request: messages array required",
+      debug: {
+        receivedType: typeof req.body,
+        receivedKeys: typeof req.body === "object" && req.body !== null ? Object.keys(req.body) : null,
+        hint: "Send Content-Type: application/json and body JSON.stringify({ messages: [...] }) or send an array directly.",
+      },
     });
   }
 
+  // Normalize each message to { role, content }
+  const normalized = messages.map((m: any) => {
+    if (typeof m === "string") return { role: "user", content: m };
+    if (m?.content) return { role: m.role ?? "user", content: m.content };
+    if (m?.text) return { role: m.role ?? "user", content: m.text };
+    if (m?.message) return { role: m.role ?? "user", content: m.message };
+    // fallback: stringified object
+    return { role: m?.role ?? "user", content: JSON.stringify(m) };
+  });
+
+  // Overwrite req.body.messages and proceed with original logic below
+  req.body = { messages: normalized };
+
+  // Now call the original handler logic (in this file) — kept the same as before
   try {
-    const { messages } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("[Netlify] GEMINI_API_KEY not set");
+      return res.status(500).json({
+        error: "AI service not configured",
+        message: "GEMINI_API_KEY environment variable is not set. Please configure it in Netlify dashboard.",
+      });
+    }
+
+    const { messages } = req.body; // now normalized
+    // still validate just in case
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Invalid request: messages array required" });
     }
 
     const model = "gemini-2.0-flash";
-    
+
     // Convert messages to Gemini format
     const contents = messages.map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -117,9 +198,9 @@ app.post("/api/chat/gemini", async (req, res) => {
     if (!response.ok) {
       const text = await response.text();
       console.error("[Netlify] Gemini API error:", response.status, text);
-      return res.status(response.status).json({ 
-        error: "Gemini API error", 
-        details: text 
+      return res.status(response.status).json({
+        error: "Gemini API error",
+        details: text,
       });
     }
 
@@ -129,16 +210,16 @@ app.post("/api/chat/gemini", async (req, res) => {
     const text = parts.join("\n");
 
     console.log("[Netlify] Chat response received");
-    res.json({
+    return res.json({
       role: "assistant",
       content: text,
       model,
     });
   } catch (error: any) {
     console.error("[Netlify] Chat error:", error);
-    res.status(500).json({ 
-      error: "Failed to contact Gemini API", 
-      details: error?.message ?? String(error) 
+    return res.status(500).json({
+      error: "Failed to contact Gemini API",
+      details: error?.message ?? String(error),
     });
   }
 });
