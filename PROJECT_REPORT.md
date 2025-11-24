@@ -560,7 +560,7 @@ Express.js Backend
 Routes (missions.ts, planets.ts, gemini.ts)
     ↓
 Data Sources:
-  - Supabase Database (if configured)
+  - 
   - OR Demo Data (fetchNASAMissions, PLANETS)
   - OR External APIs (Gemini)
     ↓
