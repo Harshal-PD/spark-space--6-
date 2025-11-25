@@ -48,36 +48,13 @@ function MiniPlanet({ planet, position, scale = 1 }: { planet: typeof PLANETS[0]
 
 function SolarSystemView({ selectedPlanet, planets }: { selectedPlanet: typeof PLANETS[0] | null; planets: typeof PLANETS }) {
   return (
-    <div className="h-[400px] w-full rounded-2xl border border-white/10 bg-black/20 overflow-hidden">
-      <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
-        <color attach="background" args={["#050816"]} />
-        <ambientLight intensity={0.4} />
-        <pointLight position={[0, 0, 0]} intensity={2} color="#ffaa00" />
-        <Stars radius={50} depth={30} count={1000} factor={2} fade speed={0.5} />
-        
-        {/* Sun */}
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.15, 32, 32]} />
-          <meshBasicMaterial color="#ffaa00" emissive="#ff6600" />
-        </mesh>
-
-        {/* Planets in orbit */}
-        {planets.slice(0, 8).map((planet, i) => {
-          const distance = 0.8 + i * 0.4;
-          const angle = (i / planets.length) * Math.PI * 2;
-          const scale = Math.max(0.3, (planet.size ?? 1) * 0.15);
-          return (
-            <MiniPlanet
-              key={planet.slug}
-              planet={planet}
-              position={[Math.cos(angle) * distance, 0, Math.sin(angle) * distance]}
-              scale={scale}
-            />
-          );
-        })}
-
-        <OrbitControls enableZoom={true} enablePan={true} minDistance={3} maxDistance={10} />
-      </Canvas>
+    <div className="w-full rounded-2xl border border-white/10 overflow-hidden">
+      <iframe
+        src="https://eyes.nasa.gov/apps/solar-system/#/home"
+        allowFullScreen
+        className="w-full h-[600px] border-0"
+        title="NASA Solar System 3D Model"
+      />
     </div>
   );
 }
@@ -400,4 +377,3 @@ export default function Planets() {
     </main>
   );
 }
-
