@@ -9,17 +9,11 @@ import { PLANETS } from "../../client/data/planets";
 const app = express();
 
 app.use((req, _res, next) => {
-  try {
-    const prefix = "/.netlify/functions/api";
-    if (typeof req.url === "string" && req.url.startsWith(prefix)) {
-      req.url = req.url.slice(prefix.length) || "/";
-    }
-  } catch (err) {
-    // don't allow this to crash the function
-    console.warn("Prefix strip error:", err);
+  const prefix = "/.netlify/functions/api";
+  if (typeof req.url === "string" && req.url.startsWith(prefix)) {
+    req.url = req.url.slice(prefix.length) || "/";
   }
   next();
-
 });
 
 // Middleware
@@ -155,7 +149,8 @@ app.post("/api/chat/gemini", async (req, res) => {
     const model = "gemini-2.0-flash";
     const contents = messages.map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      parts: [{ text: typeof m.content === "string" ? m.content : "" }],
+
     }));
 
     const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;

@@ -2,6 +2,42 @@ import type { RequestHandler } from "express";
 import { z } from "zod";
 import type { ChatRequest, ChatResponse, ChatMessage } from "@shared/api";
 
+
+// --- safeText helper: ensure message content is a plain string for Gemini ---
+const safeText = (m: any) => {
+  let c = m?.content;
+
+  if (Array.isArray(c)) {
+    return c
+      .map(x => (x?.content ?? (typeof x === "string" ? x : JSON.stringify(x))))
+      .join("\n");
+  }
+
+  if (c && typeof c === "object") {
+    if (typeof c.content === "string") return c.content;
+    return JSON.stringify(c);
+  }
+
+  if (typeof c === "string") {
+    const t = c.trim();
+    if ((t.startsWith("{") && t.endsWith("}")) || (t.startsWith("[") && t.endsWith("]"))) {
+      try {
+        const parsed = JSON.parse(t);
+        if (Array.isArray(parsed)) {
+          return parsed.map(x => x?.content ?? (typeof x === "string" ? x : JSON.stringify(x))).join("\n");
+        }
+        if (parsed && typeof parsed === "object") return parsed.content ?? JSON.stringify(parsed);
+      } catch (e) {
+        /* not JSON, leave string */
+      }
+    }
+    return c;
+  }
+
+  return String(c ?? "");
+};
+// --- end safeText ---
+
 const ChatSchema = z.object({
   model: z.string().optional(),
   messages: z
@@ -53,7 +89,10 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
   const model = modelOverride || "gemini-2.0-flash";
 
   try {
-    const contents = toGeminiContents(messages);
+    const contents = messages.map((m: any) => ({
+  role: m.role === "assistant" ? "model" : "user",
+  parts: [{ text: safeText(m) }],
+}));
     const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const response = await fetch(url, {
