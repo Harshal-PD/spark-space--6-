@@ -78,14 +78,24 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
       message: "The Gemini API key is not set. Please configure GEMINI_API_KEY environment variable."
     });
   }
-  const parsed = ChatSchema.safeParse(req.body as ChatRequest);
+  let body = req.body;
+
+  // Fix for Netlify: If body is a raw Buffer, convert it to JSON manually
+  if (Buffer.isBuffer(body)) {
+    try {
+      const rawText = body.toString("utf-8");
+      body = JSON.parse(rawText);
+      console.log("[Gemini] Manually parsed Buffer body");
+    } catch (e) {
+      console.error("[Gemini] Failed to parse Buffer body:", e);
+      // Fallback to original body if parsing fails
+    }
+  }
+  const parsed = ChatSchema.safeParse(body as ChatRequest);
   if (!parsed.success) {
-    // DEBUG: Return the received body to see what Netlify actually passed us
     return res.status(400).json({ 
       error: "Invalid request", 
-      details: parsed.error.flatten(),
-      debug_received_body: req.body,   // <--- Add this line
-      debug_content_type: req.headers["content-type"] // <--- Add this line
+      details: parsed.error.flatten() 
     });
   }
   
