@@ -52,8 +52,8 @@ const PLANET_DETAILS: Record<string, { atmosphere?: string; type: string; gravit
     dayLength: "24 hours",
     temperature: "-89°C to 58°C",
     composition: "Iron core, rocky mantle, thin crust",
-    discovered: "N/A - Our home",
-    discoveredBy: "N/A - Our home",
+    discovered: "- Our home",
+    discoveredBy: "- Our home",
     funFacts: [
       "The only planet known to have life",
       "Approximately 71% of Earth's surface is covered by water",

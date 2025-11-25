@@ -125,7 +125,11 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
     const data = (await response.json()) as any;
     const candidate = data?.candidates?.[0];
     const parts: string[] = candidate?.content?.parts?.map((p: any) => p?.text).filter(Boolean) ?? [];
-    const text = parts.join("\n");
+    let text = parts.join("\n");
+    text = text.replace(/\*\*/g, ""); 
+    
+    // Optional: If you also want to remove single stars (italics), uncomment the line below:
+    text = text.replace(/\*/g, "");
 
     const payload: ChatResponse = {
       role: "assistant",
