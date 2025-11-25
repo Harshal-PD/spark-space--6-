@@ -41,6 +41,15 @@ export function createServer() {
   // Add some logging for debugging bodies/headers on Netlify
   app.post("/api/chat/gemini", (req, res, next) => {
     if (process.env.NETLIFY) {
+      console.log("[Netlify] GEMINI incoming headers:", JSON.stringify(req.headers || {}));
+try {
+  console.log("[Netlify] GEMINI incoming raw body type:", typeof req.body);
+  // print a short preview (avoid huge logs)
+  const preview = typeof req.body === "object" ? JSON.stringify(req.body, Object.keys(req.body).slice(0,20)) : String(req.body).slice(0,1000);
+  console.log("[Netlify] GEMINI incoming body preview:", preview);
+} catch (e) {
+  console.log("[Netlify] GEMINI body logging error:", String(e));
+}
       console.log("[Netlify] /api/chat/gemini headers:", JSON.stringify(req.headers));
       console.log("[Netlify] /api/chat/gemini body:", JSON.stringify(req.body));
     }
