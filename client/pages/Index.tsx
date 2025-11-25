@@ -31,16 +31,33 @@ export default function Index() {
               style={{ animationDelay: "0s", animationFillMode: "both" }}
             >
               <div className="pointer-events-none absolute -inset-px -z-10 rounded-[20px] bg-gradient-to-br from-indigo-500/15 via-fuchsia-500/15 to-cyan-500/15 opacity-0 blur-sm transition-opacity duration-300 group-hover:opacity-100" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-px -z-10 rounded-[18px] bg-gradient-to-b from-white/10 to-transparent" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 rounded-[20px] bg-[linear-gradient(110deg,rgba(255,255,255,0)_30%,rgba(255,255,255,0.22)_50%,rgba(255,255,255,0)_70%)] bg-[length:200%_100%] opacity-30 [mask-image:linear-gradient(to_bottom,white,transparent)] animate-shine" />
-              <span className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wider text-white/80 animate-fade-up" style={{ animationDelay: "0.05s", animationFillMode: "both" }}>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-px -z-10 rounded-[18px] bg-gradient-to-b from-white/10 to-transparent"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 -z-10 rounded-[20px] bg-[linear-gradient(110deg,rgba(255,255,255,0)_30%,rgba(255,255,255,0.22)_50%,rgba(255,255,255,0)_70%)] bg-[length:200%_100%] opacity-30 [mask-image:linear-gradient(to_bottom,white,transparent)] animate-shine"
+              />
+              <span
+                className="mb-4 inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wider text-white/80 animate-fade-up"
+                style={{ animationDelay: "0.05s", animationFillMode: "both" }}
+              >
                 SpaceExplorer
               </span>
-              <h1 className="bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-cyan-200 bg-clip-text text-4xl font-extrabold leading-tight text-transparent sm:text-5xl md:text-6xl animate-fade-up" style={{ animationDelay: "0.15s", animationFillMode: "both" }}>
+              <h1
+                className="bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-cyan-200 bg-clip-text text-4xl font-extrabold leading-tight text-transparent sm:text-5xl md:text-6xl animate-fade-up"
+                style={{ animationDelay: "0.15s", animationFillMode: "both" }}
+              >
                 Explore the Universe with AI Assistance
               </h1>
-              <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg animate-fade-up" style={{ animationDelay: "0.25s", animationFillMode: "both" }}>
-                Your interactive platform for planetary missions, space data visualization, and chatbot-guided exploration of our solar system and beyond.
+              <p
+                className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg animate-fade-up"
+                style={{ animationDelay: "0.25s", animationFillMode: "both" }}
+              >
+                Your interactive platform for planetary missions, space data
+                visualization, and chatbot-guided exploration of our solar
+                system and beyond.
               </p>
               <a
                 href="#features"
@@ -68,7 +85,9 @@ export default function Index() {
       {/* Partners Marquee */}
       <section className="relative z-10 border-y border-white/10 bg-background/40 py-10">
         <div className="container mx-auto px-6">
-          <p className="mb-6 text-center text-white/60">Trusted by explorers and agencies</p>
+          <p className="mb-6 text-center text-white/60">
+            Trusted by explorers and agencies
+          </p>
         </div>
         <Marquee duration={28}>
           <Badge>NASA</Badge>
@@ -83,7 +102,10 @@ export default function Index() {
       </section>
 
       {/* Features */}
-      <section id="features" className="relative z-10 bg-gradient-to-b from-background to-background/50 py-24">
+      <section
+        id="features"
+        className="relative z-10 bg-gradient-to-b from-background to-background/50 py-24"
+      >
         <div className="container mx-auto px-6">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -124,8 +146,12 @@ export default function Index() {
       <section id="planets" className="relative z-10 py-20">
         <div className="container mx-auto px-6">
           <div className="mb-10 text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Explore Planets</h2>
-            <p className="mt-3 text-white/60">Hover a planet to preview details. Click to open its page.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Explore Planets
+            </h2>
+            <p className="mt-3 text-white/60">
+              Hover a planet to preview details. Click to open its page.
+            </p>
           </div>
 
           {/* Search Bar */}
@@ -166,7 +192,7 @@ function PlanetsGrid({ searchQuery }: { searchQuery: string }) {
       return PLANETS;
     }
     return PLANETS.filter((planet) =>
-      planet.name.toLowerCase().includes(searchQuery.toLowerCase())
+      planet.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [searchQuery]);
 
@@ -174,7 +200,8 @@ function PlanetsGrid({ searchQuery }: { searchQuery: string }) {
     return (
       <div className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 py-12">
         <p className="text-white/60">
-          No planets found matching "{searchQuery}". Try a different search term.
+          No planets found matching "{searchQuery}". Try a different search
+          term.
         </p>
       </div>
     );
@@ -208,7 +235,9 @@ function FeatureCard({
           <span className="[&_*]:size-5">{icon}</span>
         </div>
         <h3 className="text-lg font-semibold text-white">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-white/70">{description}</p>
+        <p className="mt-2 text-sm leading-relaxed text-white/70">
+          {description}
+        </p>
       </div>
     </div>
   );
