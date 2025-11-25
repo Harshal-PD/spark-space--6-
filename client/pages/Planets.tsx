@@ -19,27 +19,6 @@ const PLANET_TYPES: Record<string, PlanetType> = {
   moon: "Natural Satellite",
 };
 
-function MiniPlanet({ planet, position, scale = 1 }: { planet: typeof PLANETS[0]; position: [number, number, number]; scale?: number }) {
-  const mesh = useRef<THREE.Mesh>(null!);
-  const texture = useMemo(() => {
-    if (planet.texture) return null;
-    return generatePlanetTexture(planet.color, planet.glow, 256, planet.size ?? 1);
-  }, [planet]);
-
-  useFrame((_, delta) => {
-    if (mesh.current) mesh.current.rotation.y += delta * 0.1;
-  });
-
-  return (
-    <group position={position} scale={scale}>
-      <mesh ref={mesh}>
-        <sphereGeometry args={[0.1, 32, 32]} />
-        <meshBasicMaterial map={texture ?? undefined} color={planet.color} />
-      </mesh>
-    </group>
-  );
-}
-
 function SolarSystemView({ selectedPlanet, planets }: { selectedPlanet: typeof PLANETS[0] | null; planets: typeof PLANETS }) {
   return (
     <div className="w-full rounded-2xl border border-white/10 overflow-hidden">
