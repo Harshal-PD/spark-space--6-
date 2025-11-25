@@ -3,12 +3,6 @@ import { Link } from "react-router-dom";
 import { PLANETS } from "@/data/planets";
 import { Search, Filter, TrendingUp, BarChart3, Sparkles, ArrowRight, X } from "lucide-react";
 import Reveal from "@/components/ui/reveal";
-import { Canvas } from "@react-three/fiber";
-import { Stars, OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
-import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { generatePlanetTexture } from "@/lib/textures";
 
 type PlanetType = "All" | "Terrestrial" | "Gas Giant" | "Ice Giant" | "Dwarf Planet" | "Natural Satellite";
 
