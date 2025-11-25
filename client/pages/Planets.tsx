@@ -1,16 +1,24 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { PLANETS } from "@/data/planets";
-import { Search, Filter, TrendingUp, BarChart3, Sparkles, ArrowRight, X } from "lucide-react";
+import {
+  Search,
+  Filter,
+  TrendingUp,
+  BarChart3,
+  Sparkles,
+  ArrowRight,
+  X,
+} from "lucide-react";
 import Reveal from "@/components/ui/reveal";
-import { Canvas } from "@react-three/fiber";
-import { Stars, OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
-import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { generatePlanetTexture } from "@/lib/textures";
 
-type PlanetType = "All" | "Terrestrial" | "Gas Giant" | "Ice Giant" | "Dwarf Planet" | "Natural Satellite";
+type PlanetType =
+  | "All"
+  | "Terrestrial"
+  | "Gas Giant"
+  | "Ice Giant"
+  | "Dwarf Planet"
+  | "Natural Satellite";
 
 const PLANET_TYPES: Record<string, PlanetType> = {
   mercury: "Terrestrial",
@@ -25,59 +33,21 @@ const PLANET_TYPES: Record<string, PlanetType> = {
   moon: "Natural Satellite",
 };
 
-function MiniPlanet({ planet, position, scale = 1 }: { planet: typeof PLANETS[0]; position: [number, number, number]; scale?: number }) {
-  const mesh = useRef<THREE.Mesh>(null!);
-  const texture = useMemo(() => {
-    if (planet.texture) return null;
-    return generatePlanetTexture(planet.color, planet.glow, 256, planet.size ?? 1);
-  }, [planet]);
-
-  useFrame((_, delta) => {
-    if (mesh.current) mesh.current.rotation.y += delta * 0.1;
-  });
-
+function SolarSystemView({
+  selectedPlanet,
+  planets,
+}: {
+  selectedPlanet: (typeof PLANETS)[0] | null;
+  planets: typeof PLANETS;
+}) {
   return (
-    <group position={position} scale={scale}>
-      <mesh ref={mesh}>
-        <sphereGeometry args={[0.1, 32, 32]} />
-        <meshBasicMaterial map={texture ?? undefined} color={planet.color} />
-      </mesh>
-    </group>
-  );
-}
-
-function SolarSystemView({ selectedPlanet, planets }: { selectedPlanet: typeof PLANETS[0] | null; planets: typeof PLANETS }) {
-  return (
-    <div className="h-[400px] w-full rounded-2xl border border-white/10 bg-black/20 overflow-hidden">
-      <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
-        <color attach="background" args={["#050816"]} />
-        <ambientLight intensity={0.4} />
-        <pointLight position={[0, 0, 0]} intensity={2} color="#ffaa00" />
-        <Stars radius={50} depth={30} count={1000} factor={2} fade speed={0.5} />
-        
-        {/* Sun */}
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.15, 32, 32]} />
-          <meshBasicMaterial color="#ffaa00" emissive="#ff6600" />
-        </mesh>
-
-        {/* Planets in orbit */}
-        {planets.slice(0, 8).map((planet, i) => {
-          const distance = 0.8 + i * 0.4;
-          const angle = (i / planets.length) * Math.PI * 2;
-          const scale = Math.max(0.3, (planet.size ?? 1) * 0.15);
-          return (
-            <MiniPlanet
-              key={planet.slug}
-              planet={planet}
-              position={[Math.cos(angle) * distance, 0, Math.sin(angle) * distance]}
-              scale={scale}
-            />
-          );
-        })}
-
-        <OrbitControls enableZoom={true} enablePan={true} minDistance={3} maxDistance={10} />
-      </Canvas>
+    <div className="w-full rounded-2xl border border-white/10 overflow-hidden">
+      <iframe
+        src="https://eyes.nasa.gov/apps/solar-system/#/home"
+        allowFullScreen
+        className="w-full h-[600px] border-0"
+        title="NASA Solar System 3D Model"
+      />
     </div>
   );
 }
@@ -90,9 +60,11 @@ export default function Planets() {
 
   const filteredAndSortedPlanets = useMemo(() => {
     let filtered = PLANETS.filter((planet) => {
-      const matchesSearch = planet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           planet.short.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = selectedType === "All" || PLANET_TYPES[planet.slug] === selectedType;
+      const matchesSearch =
+        planet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        planet.short.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType =
+        selectedType === "All" || PLANET_TYPES[planet.slug] === selectedType;
       return matchesSearch && matchesType;
     });
 
@@ -119,9 +91,16 @@ export default function Planets() {
 
   const stats = useMemo(() => {
     const total = PLANETS.length;
-    const terrestrial = PLANETS.filter(p => PLANET_TYPES[p.slug] === "Terrestrial").length;
-    const gasGiants = PLANETS.filter(p => PLANET_TYPES[p.slug] === "Gas Giant").length;
-    const largest = PLANETS.reduce((max, p) => (p.size ?? 0) > (max.size ?? 0) ? p : max, PLANETS[0]);
+    const terrestrial = PLANETS.filter(
+      (p) => PLANET_TYPES[p.slug] === "Terrestrial",
+    ).length;
+    const gasGiants = PLANETS.filter(
+      (p) => PLANET_TYPES[p.slug] === "Gas Giant",
+    ).length;
+    const largest = PLANETS.reduce(
+      (max, p) => ((p.size ?? 0) > (max.size ?? 0) ? p : max),
+      PLANETS[0],
+    );
     return { total, terrestrial, gasGiants, largest };
   }, []);
 
@@ -141,7 +120,9 @@ export default function Planets() {
                 Explore All Planets
               </h1>
               <p className="mt-6 text-lg text-white/70 max-w-2xl mx-auto">
-                Discover detailed information about every planet, moon, and dwarf planet in our solar system. Compare sizes, explore characteristics, and dive deep into each celestial body.
+                Discover detailed information about every planet, moon, and
+                dwarf planet in our solar system. Compare sizes, explore
+                characteristics, and dive deep into each celestial body.
               </p>
             </div>
           </Reveal>
@@ -156,8 +137,12 @@ export default function Planets() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">Total Bodies</p>
-                    <p className="mt-2 text-3xl font-bold text-white">{stats.total}</p>
+                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">
+                      Total Bodies
+                    </p>
+                    <p className="mt-2 text-3xl font-bold text-white">
+                      {stats.total}
+                    </p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-indigo-400" />
                 </div>
@@ -167,8 +152,12 @@ export default function Planets() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">Terrestrial</p>
-                    <p className="mt-2 text-3xl font-bold text-white">{stats.terrestrial}</p>
+                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">
+                      Terrestrial
+                    </p>
+                    <p className="mt-2 text-3xl font-bold text-white">
+                      {stats.terrestrial}
+                    </p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-cyan-400" />
                 </div>
@@ -178,8 +167,12 @@ export default function Planets() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">Gas Giants</p>
-                    <p className="mt-2 text-3xl font-bold text-white">{stats.gasGiants}</p>
+                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">
+                      Gas Giants
+                    </p>
+                    <p className="mt-2 text-3xl font-bold text-white">
+                      {stats.gasGiants}
+                    </p>
                   </div>
                   <Sparkles className="h-8 w-8 text-fuchsia-400" />
                 </div>
@@ -189,10 +182,17 @@ export default function Planets() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">Largest</p>
-                    <p className="mt-2 text-lg font-bold text-white">{stats.largest.name}</p>
+                    <p className="text-sm text-white/60 uppercase tracking-wider font-semibold">
+                      Largest
+                    </p>
+                    <p className="mt-2 text-lg font-bold text-white">
+                      {stats.largest.name}
+                    </p>
                   </div>
-                  <div className="h-8 w-8 rounded-full" style={{ backgroundColor: stats.largest.color }} />
+                  <div
+                    className="h-8 w-8 rounded-full"
+                    style={{ backgroundColor: stats.largest.color }}
+                  />
                 </div>
               </div>
             </Reveal>
@@ -233,7 +233,9 @@ export default function Planets() {
                 <Filter className="h-4 w-4 text-white/60" />
                 <select
                   value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value as PlanetType)}
+                  onChange={(e) =>
+                    setSelectedType(e.target.value as PlanetType)
+                  }
                   className="bg-transparent text-white outline-none cursor-pointer"
                 >
                   {planetTypes.map((type) => (
@@ -251,8 +253,12 @@ export default function Planets() {
                   onChange={(e) => setSortBy(e.target.value as "name" | "size")}
                   className="bg-transparent text-white outline-none cursor-pointer"
                 >
-                  <option value="name" className="bg-background">Sort by Name</option>
-                  <option value="size" className="bg-background">Sort by Size</option>
+                  <option value="name" className="bg-background">
+                    Sort by Name
+                  </option>
+                  <option value="size" className="bg-background">
+                    Sort by Size
+                  </option>
                 </select>
               </div>
 
@@ -290,10 +296,18 @@ export default function Planets() {
           {viewMode === "solar" ? (
             <Reveal>
               <div className="mb-8">
-                <h2 className="mb-4 text-2xl font-bold text-white">Interactive Solar System</h2>
-                <p className="text-white/60">Explore the planets in a 3D solar system view. Use your mouse to rotate and zoom.</p>
+                <h2 className="mb-4 text-2xl font-bold text-white">
+                  Interactive Solar System
+                </h2>
+                <p className="text-white/60">
+                  Explore the planets in a 3D solar system view. Use your mouse
+                  to rotate and zoom.
+                </p>
               </div>
-              <SolarSystemView selectedPlanet={null} planets={filteredAndSortedPlanets} />
+              <SolarSystemView
+                selectedPlanet={null}
+                planets={filteredAndSortedPlanets}
+              />
             </Reveal>
           ) : (
             <>
@@ -301,14 +315,20 @@ export default function Planets() {
                 <div>
                   <h2 className="text-2xl font-bold text-white">All Planets</h2>
                   <p className="mt-1 text-white/60">
-                    {filteredAndSortedPlanets.length} {filteredAndSortedPlanets.length === 1 ? "planet" : "planets"} found
+                    {filteredAndSortedPlanets.length}{" "}
+                    {filteredAndSortedPlanets.length === 1
+                      ? "planet"
+                      : "planets"}{" "}
+                    found
                   </p>
                 </div>
               </div>
 
               {filteredAndSortedPlanets.length === 0 ? (
                 <div className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 py-12">
-                  <p className="text-white/60">No planets found matching your criteria.</p>
+                  <p className="text-white/60">
+                    No planets found matching your criteria.
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -339,7 +359,8 @@ export default function Planets() {
                                   <div
                                     className="absolute inset-0 rounded-full"
                                     style={{
-                                      background: "radial-gradient(90% 90% at 28% 28%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 45%, rgba(0,0,0,0.55) 100%)",
+                                      background:
+                                        "radial-gradient(90% 90% at 28% 28%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 45%, rgba(0,0,0,0.55) 100%)",
                                       boxShadow: `inset -8px -8px 16px #00000066, 0 0 30px ${planet.glow}55`,
                                     }}
                                   />
@@ -364,7 +385,9 @@ export default function Planets() {
                             <p className="mt-1 text-xs text-white/60 uppercase tracking-wider">
                               {PLANET_TYPES[planet.slug] || "Unknown"}
                             </p>
-                            <p className="mt-2 text-sm text-white/70 line-clamp-2">{planet.short}</p>
+                            <p className="mt-2 text-sm text-white/70 line-clamp-2">
+                              {planet.short}
+                            </p>
                           </div>
 
                           {/* Size Indicator */}
@@ -400,4 +423,3 @@ export default function Planets() {
     </main>
   );
 }
-
