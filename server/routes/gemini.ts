@@ -2,7 +2,6 @@ import type { RequestHandler } from "express";
 import { z } from "zod";
 import type { ChatRequest, ChatResponse, ChatMessage } from "@shared/api";
 
-
 // --- safeText helper: ensure message content is a plain string for Gemini ---
 const safeText = (m: any) => {
   let c = m?.content;
@@ -50,20 +49,22 @@ const ChatSchema = z.object({
     .min(1),
 });
 
+// UPDATED: Now utilizes safeText to parse the content safely
 function toGeminiContents(messages: ChatMessage[]) {
-  // Gemini expects roles: "user" and "model" only. We fold any system message into the first user turn.
   const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
   let systemPreamble = "";
   for (const m of messages) {
+    const textContent = safeText(m); // Extract text safely here
+    
     if (m.role === "system") {
-      systemPreamble += (systemPreamble ? "\n\n" : "") + m.content;
+      systemPreamble += (systemPreamble ? "\n\n" : "") + textContent;
       continue;
     }
     const role = m.role === "assistant" ? "model" : "user";
-    const text = m.role === "user" && systemPreamble ? `${systemPreamble}\n\n${m.content}` : m.content;
+    const text = m.role === "user" && systemPreamble ? `${systemPreamble}\n\n${textContent}` : textContent;
     contents.push({ role, parts: [{ text }] });
     if (m.role === "user" && systemPreamble) {
-      systemPreamble = ""; // only prepend once to the next user message
+      systemPreamble = ""; 
     }
   }
   return contents;
@@ -80,7 +81,6 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
   }
   let body = req.body;
 
-  // Fix for Netlify: If body is a raw Buffer, convert it to JSON manually
   if (Buffer.isBuffer(body)) {
     try {
       const rawText = body.toString("utf-8");
@@ -88,9 +88,9 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
       console.log("[Gemini] Manually parsed Buffer body");
     } catch (e) {
       console.error("[Gemini] Failed to parse Buffer body:", e);
-      // Fallback to original body if parsing fails
     }
   }
+  
   const parsed = ChatSchema.safeParse(body as ChatRequest);
   if (!parsed.success) {
     return res.status(400).json({ 
@@ -99,17 +99,16 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
     });
   }
   
-
   const { messages: rawMessages, model: modelOverride } = parsed.data;
   const messages = rawMessages as ChatMessage[];
   const model = modelOverride || "models/gemini-3-flash-preview";
 
   try {
-    const contents = messages.map((m: any) => ({
-  role: m.role === "assistant" ? "model" : "user",
-  parts: [{ text: safeText(m) }],
-}));
-    const url = `https://generativelanguage.googleapis.com/v1beta/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // FIX 1: Actually use your helper function!
+    const contents = toGeminiContents(messages);
+    
+    // FIX 2: Do NOT encodeURIComponent the 'model' variable, as it contains a slash ("models/")
+    const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -128,9 +127,6 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
     let text = parts.join("\n");
     text = text.replace(/\*\*/g, ""); 
     
-    // Optional: If you also want to remove single stars (italics), uncomment the line below:
-    text = text.replace(/\*/g, "");
-
     const payload: ChatResponse = {
       role: "assistant",
       content: text,
