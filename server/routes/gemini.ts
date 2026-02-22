@@ -102,14 +102,14 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
 
   const { messages: rawMessages, model: modelOverride } = parsed.data;
   const messages = rawMessages as ChatMessage[];
-  const model = modelOverride || "gemini-3-flash";
+  const model = modelOverride || "models/gemini-3-flash-preview";
 
   try {
     const contents = messages.map((m: any) => ({
   role: m.role === "assistant" ? "model" : "user",
   parts: [{ text: safeText(m) }],
 }));
-    const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const response = await fetch(url, {
       method: "POST",
