@@ -102,7 +102,7 @@ export const handleGeminiChat: RequestHandler = async (req, res) => {
 
   const { messages: rawMessages, model: modelOverride } = parsed.data;
   const messages = rawMessages as ChatMessage[];
-  const model = modelOverride || "gemma-3-27b-it";
+  const model = modelOverride || "gemini-3-flash";
 
   try {
     const contents = messages.map((m: any) => ({
